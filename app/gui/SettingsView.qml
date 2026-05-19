@@ -689,7 +689,12 @@ Flickable {
                     Slider {
                         id: slider
 
-                        value: StreamingPreferences.bitrateKbps
+                        // NOTE: do NOT bind `value` here. Binding it would form a feedback loop
+                        // via onValueChanged, and the slider's transient state during property
+                        // initialization (from/to bindings not yet stable) would be written
+                        // back into StreamingPreferences.bitrateKbps as a near-minimum value
+                        // every time SettingsView is re-opened. We initialize value once in
+                        // Component.onCompleted instead, gated by `initialized`.
 
                         stepSize: 500
                         from : 500
@@ -698,9 +703,13 @@ Flickable {
                         snapMode: "SnapOnRelease"
                         width: Math.min(bitrateDesc.implicitWidth, parent.width - (resetBitrateButton.visible ? resetBitrateButton.width + parent.spacing : 0))
 
+                        property bool initialized: false
+
                         onValueChanged: {
                             bitrateTitle.text = qsTr("Video bitrate: %1 Mbps").arg(value / 1000.0)
-                            StreamingPreferences.bitrateKbps = value
+                            if (initialized && value >= from && value <= to) {
+                                StreamingPreferences.bitrateKbps = value
+                            }
                         }
 
                         onMoved: {
@@ -708,6 +717,10 @@ Flickable {
                         }
 
                         Component.onCompleted: {
+                            // Set value AFTER from/to are stable, then enable write-back.
+                            slider.value = StreamingPreferences.bitrateKbps
+                            bitrateTitle.text = qsTr("Video bitrate: %1 Mbps").arg(slider.value / 1000.0)
+                            slider.initialized = true
                             // Refresh the text after translations change
                             languageChanged.connect(valueChanged)
                         }
