@@ -11,6 +11,7 @@ import SdlGamepadKeyNavigation 1.0
 
 CenteredGridView {
     property ComputerModel computerModel : createModel()
+    property bool isSettingsView: false
 
     id: pcGrid
     focus: true

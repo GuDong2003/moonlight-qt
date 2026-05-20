@@ -12,6 +12,7 @@ CenteredGridView {
     property bool activated
     property bool showHiddenGames
     property bool showGames
+    property bool isSettingsView: false
 
     id: appGrid
     focus: true

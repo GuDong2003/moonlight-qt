@@ -11,6 +11,7 @@ import SystemProperties 1.0
 Flickable {
     id: settingsPage
     objectName: qsTr("Settings")
+    property bool isSettingsView: true
 
     signal languageChanged()
 
