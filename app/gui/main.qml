@@ -138,7 +138,13 @@ ApplicationWindow {
     Rectangle {
         id: backgroundOverlay
         anchors.fill: parent
-        color: "black"
+        color: {
+            var item = stackView.currentItem
+            if (item && item.isSettingsView === true) {
+                return "white"
+            }
+            return "black"
+        }
         visible: backgroundImage.visible
         opacity: {
             var item = stackView.currentItem
@@ -354,6 +360,10 @@ ApplicationWindow {
         height: 60
         anchors.topMargin: 5
         anchors.bottomMargin: 5
+
+        background: Rectangle {
+            color: "transparent"
+        }
 
         Label {
             id: titleLabel
