@@ -126,3 +126,18 @@ void Path::initialize(bool portable)
         s_QmlCacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/qmlcache";
     }
 }
+
+QString Path::getBackgroundsDir()
+{
+    QString dir = QDir(s_CacheDir).absoluteFilePath("backgrounds");
+    QDir().mkpath(dir);
+    return dir;
+}
+
+void Path::deleteDataFile(QString fileName)
+{
+    QFile dataFile(getDataFilePath(fileName));
+    if (dataFile.exists()) {
+        dataFile.remove();
+    }
+}
