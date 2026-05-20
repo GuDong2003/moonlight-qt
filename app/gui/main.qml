@@ -3,7 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
 import QtQuick.Controls.Material 2.2
-import QtQuick.Dialogs 1.3
+import QtQuick.Dialogs
 
 import ComputerManager 1.0
 import AutoUpdateChecker 1.0
@@ -263,7 +263,7 @@ ApplicationWindow {
         propagateComposedEvents: true
         z: 500
 
-        onClicked: {
+        onClicked: function(mouse) {
             bgSettingsPopup.x = Math.max(8, Math.min(mouse.x, window.width - bgSettingsPopup.width - 8))
             bgSettingsPopup.y = Math.max(8, Math.min(mouse.y, window.height - bgSettingsPopup.height - 8))
             bgSettingsPopup.open()
@@ -786,6 +786,6 @@ ApplicationWindow {
         id: bgFileDialog
         title: qsTr("Choose background image")
         nameFilters: [qsTr("Images (*.jpg *.jpeg *.png *.webp *.bmp)")]
-        onAccepted: StreamingPreferences.setBackgroundImage(fileUrl)
+        onAccepted: StreamingPreferences.setBackgroundImage(selectedFile)
     }
 }
