@@ -27,4 +27,5 @@ private:
     static QString s_LogDir;
     static QString s_BoxArtCacheDir;
     static QString s_QmlCacheDir;
+    static QString s_BackgroundsDir;
 };

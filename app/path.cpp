@@ -10,6 +10,7 @@ QString Path::s_CacheDir;
 QString Path::s_LogDir;
 QString Path::s_BoxArtCacheDir;
 QString Path::s_QmlCacheDir;
+QString Path::s_BackgroundsDir;
 
 QString Path::getLogDir()
 {
@@ -29,6 +30,12 @@ QString Path::getQmlCacheDir()
     return s_QmlCacheDir;
 }
 
+QString Path::getBackgroundsDir()
+{
+    Q_ASSERT(!s_BackgroundsDir.isEmpty());
+    return s_BackgroundsDir;
+}
+
 QByteArray Path::readDataFile(QString fileName)
 {
     QFile dataFile(getDataFilePath(fileName));
@@ -36,6 +43,14 @@ QByteArray Path::readDataFile(QString fileName)
         return {};
     }
     return dataFile.readAll();
+}
+
+void Path::deleteDataFile(QString fileName)
+{
+    QFile dataFile(QDir(s_CacheDir).absoluteFilePath(fileName));
+    if (dataFile.exists()) {
+        dataFile.remove();
+    }
 }
 
 void Path::writeCacheFile(QString fileName, QByteArray data)
@@ -108,6 +123,7 @@ void Path::initialize(bool portable)
         s_LogDir = QDir::currentPath();
         s_BoxArtCacheDir = QDir::currentPath() + "/boxart";
         s_QmlCacheDir = QDir::currentPath() + "/qmlcache";
+        s_BackgroundsDir = QDir::currentPath() + "/backgrounds";
 
         // In order for the If-Modified-Since logic to work in MappingFetcher,
         // the cache directory must be different than the current directory.
@@ -124,20 +140,10 @@ void Path::initialize(bool portable)
         s_CacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
         s_BoxArtCacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/boxart";
         s_QmlCacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/qmlcache";
+        s_BackgroundsDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/backgrounds";
     }
-}
 
-QString Path::getBackgroundsDir()
-{
-    QString dir = QDir(s_CacheDir).absoluteFilePath("backgrounds");
-    QDir().mkpath(dir);
-    return dir;
-}
-
-void Path::deleteDataFile(QString fileName)
-{
-    QFile dataFile(getDataFilePath(fileName));
-    if (dataFile.exists()) {
-        dataFile.remove();
+    if (!QDir().mkpath(s_BackgroundsDir)) {
+        qWarning() << "Failed to create backgrounds dir:" << s_BackgroundsDir;
     }
 }
