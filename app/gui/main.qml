@@ -142,7 +142,7 @@ ApplicationWindow {
             color: {
                 var item = stackView.currentItem
                 if (item && item.isSettingsView === true) {
-                    return "white"
+                    return "#808080"
                 }
                 return "black"
             }
