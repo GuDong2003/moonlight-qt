@@ -115,48 +115,49 @@ ApplicationWindow {
         }
     }
 
-    // Background layer
-    Image {
-        id: backgroundImage
-        anchors.fill: parent
-        source: backgroundImageUrl()
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        cache: false
-        visible: source !== ""
-        z: -2
+    // Background layer. Use ApplicationWindow.background so it also covers
+    // the header/toolbar area instead of only the content item below it.
+    background: Item {
+        Image {
+            id: backgroundImage
+            anchors.fill: parent
+            source: backgroundImageUrl()
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: false
+            visible: source !== ""
 
-        onStatusChanged: {
-            if (status === Image.Error) {
-                streamSegueErrorDialog.text = qsTr("The selected background image could not be loaded.")
-                streamSegueErrorDialog.open()
-                StreamingPreferences.clearBackgroundImage()
+            onStatusChanged: {
+                if (status === Image.Error) {
+                    streamSegueErrorDialog.text = qsTr("The selected background image could not be loaded.")
+                    streamSegueErrorDialog.open()
+                    StreamingPreferences.clearBackgroundImage()
+                }
             }
         }
-    }
 
-    Rectangle {
-        id: backgroundOverlay
-        anchors.fill: parent
-        color: {
-            var item = stackView.currentItem
-            if (item && item.isSettingsView === true) {
-                return "white"
+        Rectangle {
+            id: backgroundOverlay
+            anchors.fill: parent
+            color: {
+                var item = stackView.currentItem
+                if (item && item.isSettingsView === true) {
+                    return "white"
+                }
+                return "black"
             }
-            return "black"
-        }
-        visible: backgroundImage.visible
-        opacity: {
-            var item = stackView.currentItem
-            if (item && item.isSettingsView === true) {
-                return StreamingPreferences.backgroundOverlaySettings
+            visible: backgroundImage.visible
+            opacity: {
+                var item = stackView.currentItem
+                if (item && item.isSettingsView === true) {
+                    return StreamingPreferences.backgroundOverlaySettings
+                }
+                return StreamingPreferences.backgroundOverlayMain
             }
-            return StreamingPreferences.backgroundOverlayMain
-        }
-        z: -1
 
-        Behavior on opacity {
-            NumberAnimation { duration: 200 }
+            Behavior on opacity {
+                NumberAnimation { duration: 200 }
+            }
         }
     }
 
