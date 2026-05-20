@@ -111,6 +111,10 @@ CenteredGridView {
         width: 300; height: 320;
         grid: pcGrid
 
+        background: Rectangle {
+            color: "transparent"
+        }
+
         property alias pcContextMenu : pcContextMenuLoader.item
 
         Image {
