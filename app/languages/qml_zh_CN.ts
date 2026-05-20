@@ -1332,5 +1332,50 @@
         <source>Enter the IP address of your host PC:</source>
         <translation>输入你主机的 IP 地址：</translation>
     </message>
+    <message>
+        <location filename="../gui/main.qml" line="130"/>
+        <source>The selected background image could not be loaded.</source>
+        <translation>无法加载所选背景图片。</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="254"/>
+        <source>Release to use as background</source>
+        <translation>释放以设为背景</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="694"/>
+        <source>Background Settings</source>
+        <translation>背景设置</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="718"/>
+        <source>Choose...</source>
+        <translation>选择图片...</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="723"/>
+        <source>Clear</source>
+        <translation>清除</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="733"/>
+        <source>Browse overlay</source>
+        <translation>主界面遮罩</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="759"/>
+        <source>Settings overlay</source>
+        <translation>设置页遮罩</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="787"/>
+        <source>Choose background image</source>
+        <translation>选择背景图片</translation>
+    </message>
+    <message>
+        <location filename="../gui/main.qml" line="788"/>
+        <source>Images (*.jpg *.jpeg *.png *.webp *.bmp)</source>
+        <translation>图片 (*.jpg *.jpeg *.png *.webp *.bmp)</translation>
+    </message>
 </context>
 </TS>
