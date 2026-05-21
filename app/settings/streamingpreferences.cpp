@@ -1,5 +1,6 @@
 #include "streamingpreferences.h"
 #include "utils.h"
+#include "../path.h"
 
 #include <QSettings>
 #include <QTranslator>
@@ -7,6 +8,10 @@
 #include <QLocale>
 #include <QReadWriteLock>
 #include <QtMath>
+#include <QFile>
+#include <QFileInfo>
+#include <QDir>
+#include <QCryptographicHash>
 
 #include <QtDebug>
 
@@ -51,6 +56,9 @@
 #define SER_CAPTURESYSKEYS "capturesyskeys"
 #define SER_KEEPAWAKE "keepawake"
 #define SER_LANGUAGE "language"
+#define SER_BGIMAGE "backgroundimage"
+#define SER_BGOVERLAYMAIN "bgoverlaymain"
+#define SER_BGOVERLAYSETTINGS "bgoverlaysettings"
 
 #define CURRENT_DEFAULT_VER 2
 
@@ -168,6 +176,10 @@ void StreamingPreferences::reload()
                                                                                                                  : UIDisplayMode::UI_MAXIMIZED)).toInt());
     language = static_cast<Language>(settings.value(SER_LANGUAGE,
                                                     static_cast<int>(Language::LANG_AUTO)).toInt());
+
+    backgroundImagePath = settings.value(SER_BGIMAGE, "").toString();
+    backgroundOverlayMain = settings.value(SER_BGOVERLAYMAIN, 0.35).toDouble();
+    backgroundOverlaySettings = settings.value(SER_BGOVERLAYSETTINGS, 0.65).toDouble();
 
 
     // Perform default settings updates as required based on last default version
@@ -358,6 +370,9 @@ void StreamingPreferences::save()
     settings.setValue(SER_SWAPFACEBUTTONS, swapFaceButtons);
     settings.setValue(SER_CAPTURESYSKEYS, captureSysKeysMode);
     settings.setValue(SER_KEEPAWAKE, keepAwake);
+    settings.setValue(SER_BGIMAGE, backgroundImagePath);
+    settings.setValue(SER_BGOVERLAYMAIN, backgroundOverlayMain);
+    settings.setValue(SER_BGOVERLAYSETTINGS, backgroundOverlaySettings);
 }
 
 int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool yuv444)
@@ -414,4 +429,53 @@ int StreamingPreferences::getDefaultBitrate(int width, int height, int fps, bool
     }
 
     return qRound(resolutionFactor * frameRateFactor) * 1000;
+}
+
+
+void StreamingPreferences::setBackgroundImage(const QUrl& sourceUrl)
+{
+    QString sourcePath = sourceUrl.isLocalFile() ? sourceUrl.toLocalFile() : sourceUrl.toString();
+    QFile sourceFile(sourcePath);
+    if (!sourceFile.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open background image:" << sourcePath;
+        return;
+    }
+
+    // Hash the first 1 MB for fast dedup; copies of the same image reuse one on-disk file.
+    QCryptographicHash hasher(QCryptographicHash::Sha1);
+    hasher.addData(sourceFile.read(1024 * 1024));
+    sourceFile.close();
+    QString hashHex = QString(hasher.result().toHex()).left(12);
+    QString ext = QFileInfo(sourcePath).suffix().toLower();
+    if (ext.isEmpty()) {
+        ext = "img";
+    }
+    QString destName = hashHex + "." + ext;
+    QString destPath = QDir(Path::getBackgroundsDir()).absoluteFilePath(destName);
+
+    if (!QFile::exists(destPath)) {
+        if (!QFile::copy(sourcePath, destPath)) {
+            qWarning() << "Failed to copy background image to" << destPath;
+            return;
+        }
+    }
+
+    if (!backgroundImagePath.isEmpty() && backgroundImagePath != destPath) {
+        QFile::remove(backgroundImagePath);
+    }
+
+    backgroundImagePath = destPath;
+    emit backgroundImageChanged();
+    save();
+}
+
+void StreamingPreferences::clearBackgroundImage()
+{
+    if (backgroundImagePath.isEmpty()) {
+        return;
+    }
+    QFile::remove(backgroundImagePath);
+    backgroundImagePath.clear();
+    emit backgroundImageChanged();
+    save();
 }

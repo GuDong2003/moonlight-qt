@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QRect>
 #include <QQmlEngine>
+#include <QUrl>
 
 class StreamingPreferences : public QObject
 {
@@ -15,6 +16,9 @@ public:
     getDefaultBitrate(int width, int height, int fps, bool yuv444);
 
     Q_INVOKABLE void save();
+
+    Q_INVOKABLE void setBackgroundImage(const QUrl& sourceUrl);
+    Q_INVOKABLE void clearBackgroundImage();
 
     void reload();
 
@@ -145,6 +149,9 @@ public:
     Q_PROPERTY(bool keepAwake MEMBER keepAwake NOTIFY keepAwakeChanged)
     Q_PROPERTY(CaptureSysKeysMode captureSysKeysMode MEMBER captureSysKeysMode NOTIFY captureSysKeysModeChanged)
     Q_PROPERTY(Language language MEMBER language NOTIFY languageChanged);
+    Q_PROPERTY(QString backgroundImagePath MEMBER backgroundImagePath NOTIFY backgroundImageChanged)
+    Q_PROPERTY(double backgroundOverlayMain MEMBER backgroundOverlayMain NOTIFY backgroundOverlayChanged)
+    Q_PROPERTY(double backgroundOverlaySettings MEMBER backgroundOverlaySettings NOTIFY backgroundOverlayChanged)
 
     Q_INVOKABLE bool retranslate();
 
@@ -187,6 +194,9 @@ public:
     UIDisplayMode uiDisplayMode;
     Language language;
     CaptureSysKeysMode captureSysKeysMode;
+    QString backgroundImagePath;
+    double backgroundOverlayMain = 0.35;
+    double backgroundOverlaySettings = 0.65;
 
 signals:
     void displayModeChanged();
@@ -224,6 +234,8 @@ signals:
     void captureSysKeysModeChanged();
     void keepAwakeChanged();
     void languageChanged();
+    void backgroundImageChanged();
+    void backgroundOverlayChanged();
 
 private:
     explicit StreamingPreferences(QQmlEngine *qmlEngine);

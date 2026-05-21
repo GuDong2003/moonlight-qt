@@ -11,6 +11,7 @@ import SdlGamepadKeyNavigation 1.0
 
 CenteredGridView {
     property ComputerModel computerModel : createModel()
+    property bool isSettingsView: false
 
     id: pcGrid
     focus: true
@@ -109,6 +110,10 @@ CenteredGridView {
     delegate: NavigableItemDelegate {
         width: 300; height: 320;
         grid: pcGrid
+
+        background: Rectangle {
+            color: "transparent"
+        }
 
         property alias pcContextMenu : pcContextMenuLoader.item
 

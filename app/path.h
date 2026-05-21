@@ -17,6 +17,8 @@ public:
 
     // Only safe to use directly for Qt classes
     static QString getDataFilePath(QString fileName);
+    static QString getBackgroundsDir();
+    static void deleteDataFile(QString fileName);
 
     static void initialize(bool portable);
 
@@ -25,4 +27,5 @@ private:
     static QString s_LogDir;
     static QString s_BoxArtCacheDir;
     static QString s_QmlCacheDir;
+    static QString s_BackgroundsDir;
 };

@@ -3,6 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
 import QtQuick.Controls.Material 2.2
+import QtQuick.Dialogs
 
 import ComputerManager 1.0
 import AutoUpdateChecker 1.0
@@ -95,6 +96,14 @@ ApplicationWindow {
     // it will never insert a line break and just extend on forever.
     ToolTip.toolTip.contentWidth: Math.min(tooltipTextLayoutHelper.width, 400)
 
+    function hasBackgroundImage() {
+        return StreamingPreferences.backgroundImagePath !== ""
+    }
+
+    function backgroundImageUrl() {
+        return hasBackgroundImage() ? "file://" + StreamingPreferences.backgroundImagePath : ""
+    }
+
     function goBack() {
         if (clearOnBack) {
             // Pop all items except the first one
@@ -106,10 +115,57 @@ ApplicationWindow {
         }
     }
 
+    // Background layer. Use ApplicationWindow.background so it also covers
+    // the header/toolbar area instead of only the content item below it.
+    background: Item {
+        Image {
+            id: backgroundImage
+            anchors.fill: parent
+            source: backgroundImageUrl()
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: false
+            visible: source !== ""
+
+            onStatusChanged: {
+                if (status === Image.Error) {
+                    streamSegueErrorDialog.text = qsTr("The selected background image could not be loaded.")
+                    streamSegueErrorDialog.open()
+                    StreamingPreferences.clearBackgroundImage()
+                }
+            }
+        }
+
+        Rectangle {
+            id: backgroundOverlay
+            anchors.fill: parent
+            color: {
+                var item = stackView.currentItem
+                if (item && item.isSettingsView === true) {
+                    return "#808080"
+                }
+                return "black"
+            }
+            visible: backgroundImage.visible
+            opacity: {
+                var item = stackView.currentItem
+                if (item && item.isSettingsView === true) {
+                    return StreamingPreferences.backgroundOverlaySettings
+                }
+                return StreamingPreferences.backgroundOverlayMain
+            }
+
+            Behavior on opacity {
+                NumberAnimation { duration: 200 }
+            }
+        }
+    }
+
     StackView {
         id: stackView
         anchors.fill: parent
         focus: true
+        background: null
 
         Component.onCompleted: {
             // Perform our early initialization before constructing
@@ -152,6 +208,73 @@ ApplicationWindow {
         // when Menu is consumed by a focused control.
         Keys.onHangupPressed: {
             settingsButton.clicked()
+        }
+    }
+
+    DropArea {
+        id: imageDropArea
+        anchors.fill: parent
+        z: 1000
+        keys: ["text/uri-list"]
+
+        property bool showDropHint: false
+
+        function isImageUrl(url) {
+            var s = url.toString().toLowerCase()
+            return s.endsWith(".jpg") || s.endsWith(".jpeg") ||
+                   s.endsWith(".png") || s.endsWith(".webp") || s.endsWith(".bmp")
+        }
+
+        function acceptsDrop(dropData) {
+            return dropData.hasUrls && dropData.urls.length === 1 && isImageUrl(dropData.urls[0])
+        }
+
+        onEntered: {
+            if (acceptsDrop(drag)) {
+                showDropHint = true
+                drag.accept(Qt.CopyAction)
+            }
+            else {
+                showDropHint = false
+                drag.accepted = false
+            }
+        }
+
+        onExited: showDropHint = false
+
+        onDropped: {
+            if (acceptsDrop(drop)) {
+                StreamingPreferences.setBackgroundImage(drop.urls[0])
+            }
+            showDropHint = false
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: "#88000000"
+            visible: imageDropArea.showDropHint
+
+            Label {
+                anchors.centerIn: parent
+                text: qsTr("Release to use as background")
+                color: "white"
+                font.pixelSize: 28
+            }
+        }
+    }
+
+    MouseArea {
+        id: rightClickArea
+        anchors.fill: parent
+        acceptedButtons: Qt.RightButton
+        propagateComposedEvents: true
+        z: 500
+
+        onClicked: function(mouse) {
+            bgSettingsPopup.x = Math.max(8, Math.min(mouse.x, window.width - bgSettingsPopup.width - 8))
+            bgSettingsPopup.y = Math.max(8, Math.min(mouse.y, window.height - bgSettingsPopup.height - 8))
+            bgSettingsPopup.open()
+            mouse.accepted = false
         }
     }
 
@@ -238,6 +361,10 @@ ApplicationWindow {
         height: 60
         anchors.topMargin: 5
         anchors.bottomMargin: 5
+
+        background: Rectangle {
+            color: "transparent"
+        }
 
         Label {
             id: titleLabel
@@ -553,5 +680,123 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    Popup {
+        id: bgSettingsPopup
+        width: 320
+        height: 240
+        modal: false
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: "#dd1e1e1e"
+            radius: 8
+            border.color: "#444"
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 10
+
+            Label {
+                text: qsTr("Background Settings")
+                color: "white"
+                font.bold: true
+                font.pixelSize: 16
+            }
+
+            RowLayout {
+                spacing: 8
+                Layout.fillWidth: true
+
+                Rectangle {
+                    width: 64
+                    height: 36
+                    color: "#333"
+                    border.color: "#555"
+
+                    Image {
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        source: backgroundImageUrl()
+                        fillMode: Image.PreserveAspectCrop
+                        visible: source !== ""
+                    }
+                }
+
+                Button {
+                    text: qsTr("Choose...")
+                    onClicked: bgFileDialog.open()
+                }
+
+                Button {
+                    text: qsTr("Clear")
+                    enabled: hasBackgroundImage()
+                    onClicked: StreamingPreferences.clearBackgroundImage()
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                Label {
+                    text: qsTr("Browse overlay")
+                    color: "white"
+                    Layout.preferredWidth: 110
+                }
+
+                Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 0.8
+                    stepSize: 0.05
+                    enabled: hasBackgroundImage()
+                    value: StreamingPreferences.backgroundOverlayMain
+                    onMoved: StreamingPreferences.backgroundOverlayMain = value
+                }
+
+                Label {
+                    text: Math.round(StreamingPreferences.backgroundOverlayMain * 100) + "%"
+                    color: "white"
+                    Layout.preferredWidth: 40
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                Label {
+                    text: qsTr("Settings overlay")
+                    color: "white"
+                    Layout.preferredWidth: 110
+                }
+
+                Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 0.8
+                    stepSize: 0.05
+                    enabled: hasBackgroundImage()
+                    value: StreamingPreferences.backgroundOverlaySettings
+                    onMoved: StreamingPreferences.backgroundOverlaySettings = value
+                }
+
+                Label {
+                    text: Math.round(StreamingPreferences.backgroundOverlaySettings * 100) + "%"
+                    color: "white"
+                    Layout.preferredWidth: 40
+                }
+            }
+        }
+
+        onClosed: StreamingPreferences.save()
+    }
+
+    FileDialog {
+        id: bgFileDialog
+        title: qsTr("Choose background image")
+        nameFilters: [qsTr("Images (*.jpg *.jpeg *.png *.webp *.bmp)")]
+        onAccepted: StreamingPreferences.setBackgroundImage(selectedFile)
     }
 }
