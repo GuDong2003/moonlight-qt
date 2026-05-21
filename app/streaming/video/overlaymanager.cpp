@@ -9,8 +9,8 @@ OverlayManager::OverlayManager() :
 {
     memset(m_Overlays, 0, sizeof(m_Overlays));
 
-    m_Overlays[OverlayType::OverlayDebug].color = {0xD0, 0xD0, 0x00, 0xFF};
-    m_Overlays[OverlayType::OverlayDebug].fontSize = 20;
+    m_Overlays[OverlayType::OverlayDebug].color = {0xB8, 0xE8, 0xC8, 0xFF};
+    m_Overlays[OverlayType::OverlayDebug].fontSize = 14;
 
     m_Overlays[OverlayType::OverlayStatusUpdate].color = {0xCC, 0x00, 0x00, 0xFF};
     m_Overlays[OverlayType::OverlayStatusUpdate].fontSize = 36;
@@ -147,15 +147,49 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
     }
 
     // Exchange the old surface with the new one
+    SDL_Surface* newSurface = nullptr;
+    if (m_Overlays[type].enabled) {
+        // OverlayDebug is rendered as a single, non-wrapped UTF-8 line and then
+        // composited onto a translucent dark panel. OverlayStatusUpdate keeps
+        // the wrapped path to preserve potential line breaks.
+        SDL_Surface* textSurface = (type == OverlayType::OverlayDebug)
+            ? TTF_RenderUTF8_Blended(m_Overlays[type].font,
+                                     m_Overlays[type].text,
+                                     m_Overlays[type].color)
+            : TTF_RenderUTF8_Blended_Wrapped(m_Overlays[type].font,
+                                             m_Overlays[type].text,
+                                             m_Overlays[type].color,
+                                             1024);
+
+        if (textSurface != nullptr && type == OverlayType::OverlayDebug) {
+            const int padX = 14;
+            const int padY = 6;
+            SDL_Surface* panel = SDL_CreateRGBSurfaceWithFormat(
+                0,
+                textSurface->w + padX * 2,
+                textSurface->h + padY * 2,
+                32,
+                SDL_PIXELFORMAT_ARGB8888);
+            if (panel != nullptr) {
+                SDL_FillRect(panel, nullptr,
+                             SDL_MapRGBA(panel->format, 0x14, 0x14, 0x14, 0xA0));
+                SDL_Rect dst = { padX, padY, textSurface->w, textSurface->h };
+                SDL_SetSurfaceBlendMode(textSurface, SDL_BLENDMODE_BLEND);
+                SDL_BlitSurface(textSurface, nullptr, panel, &dst);
+                SDL_FreeSurface(textSurface);
+                newSurface = panel;
+            }
+            else {
+                newSurface = textSurface;
+            }
+        }
+        else {
+            newSurface = textSurface;
+        }
+    }
+
     SDL_Surface* oldSurface = (SDL_Surface*)SDL_AtomicSetPtr(
-        (void**)&m_Overlays[type].surface,
-        m_Overlays[type].enabled ?
-            // The _Wrapped variant is required for line breaks to work
-            TTF_RenderText_Blended_Wrapped(m_Overlays[type].font,
-                                           m_Overlays[type].text,
-                                           m_Overlays[type].color,
-                                           1024)
-            : nullptr);
+        (void**)&m_Overlays[type].surface, newSurface);
 
     // Notify the renderer
     m_Renderer->notifyOverlayUpdated(type);

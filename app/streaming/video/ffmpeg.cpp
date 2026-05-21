@@ -879,101 +879,81 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
         break;
     }
 
-    if (stats.receivedFps > 0) {
-        if (m_VideoDecoderCtx != nullptr) {
-#ifdef DISPLAY_BITRATE
-            double avgVideoMbps = m_BwTracker.GetAverageMbps();
-            double peakVideoMbps = m_BwTracker.GetPeakMbps();
-#endif
-
-            ret = snprintf(&output[offset],
-                           length - offset,
-                           "Video stream: %dx%d %.2f FPS (Codec: %s)\n"
-#ifdef DISPLAY_BITRATE
-                           "Bitrate: %.1f Mbps, Peak (%us): %.1f\n"
-#endif
-                           ,
-                           m_VideoDecoderCtx->width,
-                           m_VideoDecoderCtx->height,
-                           stats.totalFps,
-                           codecString
-#ifdef DISPLAY_BITRATE
-                           ,
-                           avgVideoMbps,
-                           m_BwTracker.GetWindowSeconds(),
-                           peakVideoMbps
-#endif
-                           );
-            if (ret < 0 || ret >= length - offset) {
-                SDL_assert(false);
-                return;
-            }
-
-            offset += ret;
-        }
-
-        ret = snprintf(&output[offset],
-                       length - offset,
-                       "Incoming frame rate from network: %.2f FPS\n"
-                       "Decoding frame rate: %.2f FPS\n"
-                       "Rendering frame rate: %.2f FPS\n",
-                       stats.receivedFps,
-                       stats.decodedFps,
-                       stats.renderedFps);
-        if (ret < 0 || ret >= length - offset) {
-            SDL_assert(false);
-            return;
-        }
-
-        offset += ret;
+    if (stats.receivedFps <= 0) {
+        // No usable data yet
+        return;
     }
 
+    char resolutionPart[64] = {0};
+    if (m_VideoDecoderCtx != nullptr) {
+        snprintf(resolutionPart, sizeof(resolutionPart), "%dx%d@%.0f",
+                 m_VideoDecoderCtx->width,
+                 m_VideoDecoderCtx->height,
+                 stats.totalFps);
+    }
+    else {
+        snprintf(resolutionPart, sizeof(resolutionPart), "@%.0f", stats.totalFps);
+    }
+
+    char latencyPart[48];
+    if (stats.renderedFrames != 0 && stats.lastRtt != 0) {
+        snprintf(latencyPart, sizeof(latencyPart), "%u \xC2\xB1 %u ms",
+                 stats.lastRtt, stats.lastRttVariance);
+    }
+    else {
+        snprintf(latencyPart, sizeof(latencyPart), "N/A");
+    }
+
+    char dropsPart[32];
+    if (stats.renderedFrames != 0 && stats.totalFrames != 0 && stats.decodedFrames != 0) {
+        double netDrop = (double)stats.networkDroppedFrames / stats.totalFrames * 100.0;
+        double jitDrop = (double)stats.pacerDroppedFrames / stats.decodedFrames * 100.0;
+        snprintf(dropsPart, sizeof(dropsPart), "%.2f%%", netDrop + jitDrop);
+    }
+    else {
+        snprintf(dropsPart, sizeof(dropsPart), "N/A");
+    }
+
+    char decodePart[32];
+    if (stats.decodedFrames != 0) {
+        double decMs = (stats.totalDecodeTimeUs / 1000.0) / stats.decodedFrames;
+        snprintf(decodePart, sizeof(decodePart), "%.2fms", decMs);
+    }
+    else {
+        snprintf(decodePart, sizeof(decodePart), "N/A");
+    }
+
+    char encodePart[32];
     if (stats.framesWithHostProcessingLatency > 0) {
-        ret = snprintf(&output[offset],
-                       length - offset,
-                       "Host processing latency min/max/average: %.1f/%.1f/%.1f ms\n",
-                       (float)stats.minHostProcessingLatency / 10,
-                       (float)stats.maxHostProcessingLatency / 10,
-                       (float)stats.totalHostProcessingLatency / 10 / stats.framesWithHostProcessingLatency);
-        if (ret < 0 || ret >= length - offset) {
-            SDL_assert(false);
-            return;
-        }
-
-        offset += ret;
+        double encMs = (double)stats.totalHostProcessingLatency / 10.0
+                     / stats.framesWithHostProcessingLatency;
+        snprintf(encodePart, sizeof(encodePart), "%.1fms", encMs);
+    }
+    else {
+        snprintf(encodePart, sizeof(encodePart), "N/A");
     }
 
-    if (stats.renderedFrames != 0) {
-        char rttString[32];
-
-        if (stats.lastRtt != 0) {
-            snprintf(rttString, sizeof(rttString), "%u ms (variance: %u ms)", stats.lastRtt, stats.lastRttVariance);
-        }
-        else {
-            snprintf(rttString, sizeof(rttString), "N/A");
-        }
-
-        ret = snprintf(&output[offset],
-                       length - offset,
-                       "Frames dropped by your network connection: %.2f%%\n"
-                       "Frames dropped due to network jitter: %.2f%%\n"
-                       "Average network latency: %s\n"
-                       "Average decoding time: %.2f ms\n"
-                       "Average frame queue delay: %.2f ms\n"
-                       "Average rendering time (including monitor V-sync latency): %.2f ms\n",
-                       (float)stats.networkDroppedFrames / stats.totalFrames * 100,
-                       (float)stats.pacerDroppedFrames / stats.decodedFrames * 100,
-                       rttString,
-                       (double)(stats.totalDecodeTimeUs / 1000.0) / stats.decodedFrames,
-                       (double)(stats.totalPacerTimeUs / 1000.0) / stats.renderedFrames,
-                       (double)(stats.totalRenderTimeUs / 1000.0) / stats.renderedFrames);
-        if (ret < 0 || ret >= length - offset) {
-            SDL_assert(false);
-            return;
-        }
-
-        offset += ret;
+    ret = snprintf(&output[offset],
+                   length - offset,
+                   "%s   %s   Frames: Rx %.1f/ De %.1f/ Rd %.1f FPS   "
+                   "Latency: %s  Drops: %s  Bandwidth: %.2f Mbps  "
+                   "Decode: %s  Encode: %s",
+                   resolutionPart,
+                   codecString,
+                   stats.receivedFps,
+                   stats.decodedFps,
+                   stats.renderedFps,
+                   latencyPart,
+                   dropsPart,
+                   m_BwTracker.GetAverageMbps(),
+                   decodePart,
+                   encodePart);
+    if (ret < 0 || ret >= length - offset) {
+        SDL_assert(false);
+        return;
     }
+
+    offset += ret;
 }
 
 void FFmpegVideoDecoder::logVideoStats(VIDEO_STATS& stats, const char* title)

@@ -411,7 +411,7 @@ public:
 
             switch (type) {
             case Overlay::OverlayDebug:
-                [m_OverlayTextFields[type] setAlignment:NSTextAlignmentLeft];
+                [m_OverlayTextFields[type] setAlignment:NSTextAlignmentCenter];
                 break;
             case Overlay::OverlayStatusUpdate:
                 [m_OverlayTextFields[type] setAlignment:NSTextAlignmentRight];
@@ -428,7 +428,17 @@ public:
         }
 
         // Update text contents
-        [m_OverlayTextFields[type] setStringValue: [NSString stringWithUTF8String:Session::get()->getOverlayManager().getOverlayText(type)]];
+        NSString* str = [NSString stringWithUTF8String:Session::get()->getOverlayManager().getOverlayText(type)];
+        if (type == Overlay::OverlayDebug && str.length > 0) {
+            // Compose a translucent dark panel behind the centered single line.
+            NSMutableAttributedString* attr = [[NSMutableAttributedString alloc] initWithString:str];
+            [attr addAttribute:NSBackgroundColorAttributeName
+                         value:[NSColor colorWithSRGBRed:0.08 green:0.08 blue:0.08 alpha:0.63]
+                         range:NSMakeRange(0, str.length)];
+            [m_OverlayTextFields[type] setAttributedStringValue:attr];
+        } else {
+            [m_OverlayTextFields[type] setStringValue:str];
+        }
 
         // Unhide if it's enabled
         [m_OverlayTextFields[type] setHidden: !Session::get()->getOverlayManager().isOverlayEnabled(type)];

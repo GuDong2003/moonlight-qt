@@ -1571,8 +1571,8 @@ void DrmRenderer::notifyOverlayUpdated(Overlay::OverlayType type)
             overlayRect.y = m_OutputRect.h - newSurface->h;
         }
         else if (type == Overlay::OverlayDebug) {
-            // Top left
-            overlayRect.x = 0;
+            // Top center
+            overlayRect.x = (m_OutputRect.w - newSurface->w) / 2;
             overlayRect.y = 0;
         }
 

@@ -856,6 +856,12 @@ VAAPIRenderer::renderFrame(AVFrame* frame)
                 overlayRect.y += windowHeight;
             }
 
+            // OverlayDebug is horizontally centered (computed at render time
+            // because the window width is not known when the surface is built)
+            if (type == Overlay::OverlayDebug) {
+                overlayRect.x = (windowWidth - overlayRect.w) / 2;
+            }
+
             status = vaAssociateSubpicture(vaDeviceContext->display,
                                            m_OverlaySubpicture[type],
                                            &surface,
