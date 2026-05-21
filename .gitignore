@@ -8,3 +8,22 @@ libs/
 config.tests/*/.qmake.stash
 config.tests/*/Makefile
 .worktrees/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# qmake generated files
+.qmake.cache
+.qmake.stash
+config.log
+Makefile
+**/Makefile
+**/Makefile.Debug
+**/Makefile.Release
+**/release/
+
+# Local build outputs
+*.a
+app/Moonlight.app/
+app/qml_qmlcache.qrc
